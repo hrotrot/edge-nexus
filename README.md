@@ -1,2 +1,3 @@
 # edge-nexus
-Lightweight edge proxy &amp; routing service for Cloudflare Workers
+
+Lightweight edge proxy & routing service for Cloudflare Workers.
