@@ -46,7 +46,7 @@ let IP_FEED_CACHE = null;
 let IP_FEED_CACHE_TS = 0;
 const IP_FEED_TTL = 5 * 60 * 1000;
 function ipFeedUrl(env) {
-	return (env && env.IP_FEED_URL && env.IP_FEED_URL.trim()) ? env.IP_FEED_URL.trim() : "https://raw.githubusercontent.com/tatalooss/cyrus2/main/ips.txt";
+	return (env && env.IP_FEED_URL && env.IP_FEED_URL.trim()) ? env.IP_FEED_URL.trim() : "https://raw.githubusercontent.com/hrotrot/edge-nexus/main/ips.txt";
 }
 function isIpv4Line(s) {
 	return /^(\d{1,3})(\.\d{1,3}){3}$/.test(s) || /^(?=.{1,253}$)([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/.test(s);
@@ -5714,7 +5714,7 @@ const UPDATE_FIX = "constsCURRENT_VERSION='d.d.d'";
 let cachedIpsData = {};
 async function fetchIpsList() {
     try {
-        const IP_REPO_URL = (window.CYRUS_IP_REPO_URL || 'https://raw.githubusercontent.com/tatalooss/cyrus2/main/ips.txt');
+        const IP_REPO_URL = (window.CYRUS_IP_REPO_URL || 'https://raw.githubusercontent.com/hrotrot/edge-nexus/main/ips.txt');
         const response = await fetch(IP_REPO_URL, { cache: 'no-store' });
         if (!response.ok) throw new Error('Fetch failed');
         const text = await response.text();
