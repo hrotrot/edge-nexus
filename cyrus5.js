@@ -315,14 +315,16 @@ const Router = {
 	async handleSubscription(url, env) {
 		const isSubPath = url.pathname.startsWith("/sub/");
 		const isSubtPath = url.pathname.startsWith("/subt/");
+		const isFeedPath = url.pathname.startsWith("/feed/");
+		const isSuballPath = url.pathname.startsWith("/suball/");
 		const isSingboxPath = url.pathname.startsWith("/singbox/");
-		const offset = isSingboxPath ? 9 : isSubtPath ? 6 : isSubPath ? 5 : 6;
+		const offset = isSingboxPath ? 9 : isSuballPath ? 8 : (isSubtPath || isFeedPath) ? 6 : isSubPath ? 5 : 6;
 		let subUser = decodeURIComponent(url.pathname.slice(offset));
 		const host = url.hostname;
 		try {
 			const user = await env.DB.prepare("SELECT * FROM users WHERE username = ? OR uuid = ?").bind(subUser, subUser).first();
 			const ct = String(user ? user.connection_type : "").toLowerCase();
-			if (!user || (!ct.includes("vl" + "e" + "ss") && !ct.includes("trojan"))) {
+			if (!user || (!ct.includes("vl" + "e" + "ss") && !ct.includes("trojan") && !ct.includes("shadowsocks"))) {
 				console.log(`[handleSubscription] 404: username="${subUser}" found=${!!user} connection_type=${user ? user.connection_type : "N/A"}`);
 				return new Response("Not Found", { status: 404 });
 			}
