@@ -323,17 +323,8 @@ const Router = {
 		const host = url.hostname;
 		try {
 			const user = await env.DB.prepare("SELECT * FROM users WHERE username = ? OR uuid = ?").bind(subUser, subUser).first();
-			const ct = String(user ? user.connection_type : "").toLowerCase();
-			if (!user || (!ct.includes("vl" + "e" + "ss") && !ct.includes("trojan") && !ct.includes("shadowsocks"))) {
-				console.log(`[handleSubscription] 404: username="${subUser}" found=${!!user} connection_type=${user ? user.connection_type : "N/A"}`);
-				return new Response("Not Found", { status: 404 });
-			}
-			if (isSubPath && !ct.includes("vl" + "e" + "ss")) {
-				console.log(`[handleSubscription] 404 sub (no vless): username="${subUser}" connection_type=${user ? user.connection_type : "N/A"}`);
-				return new Response("Not Found", { status: 404 });
-			}
-			if (isSubtPath && !ct.includes("trojan")) {
-				console.log(`[handleSubscription] 404 subt (no trojan): username="${subUser}" connection_type=${user.connection_type}`);
+			if (!user) {
+				console.log(`[handleSubscription] 404: username="${subUser}" not found`);
 				return new Response("Not Found", { status: 404 });
 			}
 			try {
@@ -1092,7 +1083,13 @@ const DbService = {
 			}
 		}
 		const existing = await db.prepare("SELECT id FROM users WHERE username = ?").bind(username).first();
-		if (existing) { bootstrapDone = true; return; }
+		if (existing) {
+			try {
+				await db.prepare("UPDATE users SET connection_type = 'vless,trojan,shadowsocks' WHERE id = ?").bind(existing.id).run();
+			} catch (e) {}
+			bootstrapDone = true;
+			return;
+		}
 		const rHex = Array.from(crypto.getRandomValues(new Uint8Array(6))).map((b) => b.toString(16).padStart(2, "0")).join("");
 		const uuid = `43595255-535f-504e-4c5f-${rHex}`;
 		const ips = env.BOOT_IPS || null;
@@ -1248,14 +1245,13 @@ const SubscriptionService = {
 			} catch (e) {}
 		}
 
-		const ct = String(user.connection_type || "vless,trojan,shadowsocks").toLowerCase();
-		const allowVless = ct.includes("vless") || ct.includes("vl" + "e" + "ss");
-		const allowTrojan = ct.includes("trojan");
-		const allowSS = ct.includes("shadowsocks");
-
-		const enableVless = isAllMode ? allowVless : (isVlessMode && allowVless);
-		const enableTrojan = isAllMode ? allowTrojan : (isTrojanMode && allowTrojan);
-		const enableSS = isAllMode && allowSS;
+		// Dedicated endpoints ALWAYS generate the requested protocol:
+		// mode "vless" -> VLESS
+		// mode "trojan" -> Trojan
+		// mode "all" -> VLESS + Trojan + Shadowsocks
+		const enableVless = isVlessMode || isAllMode;
+		const enableTrojan = isTrojanMode || isAllMode;
+		const enableSS = isAllMode;
 
 		// TLS Port sets matching Cloudflare standard edge
 		const tlsPortSet = new Set(["443", "2053", "2083", "2087", "2096", "8443"]);
@@ -1285,15 +1281,15 @@ const SubscriptionService = {
 				const tlsParams = isTlsPort ? ("&insecure=0&fp=" + fp + "&allowInsecure=0&sni=" + host) : "";
 
 				if (enableVless) {
-					const remark = "CFsaz | " + flagEmoji + " | VLESS-" + portStr;
+					const remark = "@CFsazbot & 👾 & VLESS & " + portStr;
 					links.push("vl" + "e" + "ss://" + user.uuid + "@" + safeIp + ":" + portStr + "?path=" + dynPath + "&security=" + tlsVal + "&encryption=none&host=" + host + "&type=ws" + tlsParams + userFrag + "#" + encodeURIComponent(remark));
 				}
 				if (enableTrojan) {
-					const trojanRemark = "CFsaz | " + flagEmoji + " | Trojan-" + portStr;
+					const trojanRemark = "@CFsazbot & 👾 & Trojan & " + portStr;
 					links.push("trojan://" + user.uuid + "@" + safeIp + ":" + portStr + "?path=" + dynPath + "&security=" + tlsVal + "&host=" + host + "&type=ws" + tlsParams + userFrag + "#" + encodeURIComponent(trojanRemark));
 				}
 				if (enableSS) {
-					const ssRemark = "CFsaz | " + flagEmoji + " | SS-" + portStr;
+					const ssRemark = "@CFsazbot & 👾 & SS & " + portStr;
 					const methodPass = btoa("aes-256-gcm:" + user.uuid);
 					let pluginOpts = "v2ray-plugin;mode=websocket;host=" + host + ";path=" + decodeURIComponent(dynPath) + (isTlsPort ? ";tls" : "");
 					links.push("ss://" + methodPass + "@" + safeIp + ":" + portStr + "/?plugin=" + encodeURIComponent(pluginOpts) + "#" + encodeURIComponent(ssRemark));
